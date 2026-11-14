@@ -3,7 +3,7 @@
 Status: draft
 Delivery: showcase (situs statis publik + kolektor privat; penyedia hosting dipilih di Phase 5 dan disetujui di gate Phase 12)
 
-Dokumen sumber: [brief](brief.md), [research](research.md), [personas](personas.md). Kode bukti primer P1–P10 merujuk ke tabel "Bukti primer" di research.md.
+Dokumen sumber: [brief](brief.md), [research](research.md), [personas](personas.md). Kode bukti primer P1–P16 merujuk ke tabel "Bukti primer" di research.md.
 
 ## 1. Problem and goals
 
@@ -72,11 +72,12 @@ Konvensi: "artefak publik" = semua file hasil build mode publik (HTML, JSON, fee
 Sebagai Thomas, aku ingin kolektor terjadwal membaca registry factory dan biaya setiap thread project, supaya angka di dashboard berasal dari sumber asli.
 
 Acceptance criteria:
-- AC-01.1 Given fixture registry dengan 3 project dan 4 thread, dan CLI usage palsu mengembalikan kredit US$0,34 dan list price US$52,86 untuk satu thread, When kolektor dijalankan, Then tabel `collector_runs` memuat satu run `ok` dengan `threads_ok = 4`, dan snapshot mode pemilik menampilkan kedua angka untuk thread itu secara terpisah.
+- AC-01.1 Given fixture registry dengan 3 project dan 4 thread, dan server API usage Amp palsu (`GET /api/v2/threads/{id}/usage`) mengembalikan `usage: 0.34` dan `estimatedProviderCostAtListPriceUSD: 52.86` untuk satu thread, When kolektor dijalankan, Then tabel `collector_runs` memuat satu run `ok` dengan `threads_ok = 4`, dan snapshot mode pemilik menampilkan kedua angka untuk thread itu secara terpisah.
 - AC-01.2 Given registry mengganti `thread_url` project A dari thread X ke thread Y (handoff), When kolektor dijalankan lagi, Then biaya project A = biaya X + biaya Y, dan X tidak hilang dari mode pemilik.
-- AC-01.3 Given CLI usage untuk satu thread keluar dengan error atau teks yang tidak bisa diparse, When kolektor dijalankan, Then run berstatus `partial`, thread itu memakai angka terakhir yang valid dengan tanda "angka lama per <waktu>", dan thread lain tetap diperbarui.
+- AC-01.3 Given API usage untuk satu thread mengembalikan HTTP 5xx, 429, atau JSON yang tidak cocok dengan schema, When kolektor dijalankan, Then run berstatus `partial`, thread itu memakai angka terakhir yang valid dengan tanda "angka lama per <waktu>", dan thread lain tetap diperbarui.
 - AC-01.4 Given registry tidak bisa dibaca (repo factory tidak terjangkau), When kolektor dijalankan, Then run berstatus `failed`, snapshot sebelumnya tidak ditimpa, dan halaman menampilkan peringatan US-10.
-- AC-01.5 Given `amp threads list` memuat thread yang tidak ada di registry, When kolektor dijalankan, Then thread itu tidak dibaca dan tidak muncul di database maupun snapshot (kolektor tidak memanggil `threads list`).
+- AC-01.5 Given akun Amp punya thread yang tidak ada di registry, When kolektor dijalankan, Then server palsu mencatat 0 request ke endpoint daftar thread dan ke thread itu, dan thread itu tidak muncul di penyimpanan maupun snapshot.
+- AC-01.6 Given thread berumur > 90 hari sehingga API tidak lagi mengembalikan usage (P12), When kolektor dijalankan, Then pembacaan terakhir yang tersimpan tetap dipakai dengan label "arsip per <waktu>" dan run tidak dianggap gagal.
 
 States: empty (registry belum punya project aktif → beranda "Belum ada project berjalan"), loading (tidak ada; situs statis), error (run failed → banner US-10), offline (tidak relevan untuk kolektor; situs statis tetap tampil dari cache browser), success (run ok + waktu).
 
@@ -86,7 +87,7 @@ Sebagai Thomas, aku ingin tahu kapan setiap project masuk setiap fase dan berapa
 
 Acceptance criteria:
 - AC-02.1 Given riwayat git registry berisi commit yang mengubah `phase` project A dari 1 ke 2 pada waktu T, When kolektor melakukan backfill, Then timeline A menampilkan "Fase 2 sejak T" dengan T dari waktu commit, dan sumbernya tertulis "commit registry".
-- AC-02.2 Given A berada di fase 1 dari T1 sampai T2 dan CLI usage palsu mengembalikan biaya per rentang, When biaya per fase dihitung, Then biaya fase 1 = usage(thread, T1, T2) untuk semua thread A, dan jumlah biaya semua fase = total biaya A (selisih ≤ US$0,01).
+- AC-02.2 Given A berada di fase 1 dari T1 sampai T2 dan CLI `amp threads usage --start --end` palsu mengembalikan biaya per rentang, When biaya per fase dihitung, Then biaya fase 1 = usage(thread, T1, T2) untuk semua thread A, dan jumlah biaya semua fase = total biaya A (selisih ≤ US$0,01).
 - AC-02.3 Given fase berubah dua kali di antara dua run kolektor, When run berikutnya membaca riwayat git, Then kedua transisi tercatat dengan waktu commit masing-masing, bukan waktu run.
 - AC-02.4 Given biaya tercatat sebelum transisi fase pertama yang diketahui, When ditampilkan, Then biaya itu masuk baris "Sebelum riwayat fase", bukan dibagi rata ke fase.
 
@@ -223,7 +224,7 @@ Acceptance criteria:
 | Area | Requirement |
 | --- | --- |
 | Performance | Beranda dan detail: LCP ≤ 2,0 s, CLS < 0,1, INP ≤ 200 ms pada Lighthouse mobile (Moto G Power, 4G lambat simulasi); JavaScript ≤ 50 KB gzip per halaman; HTML beranda ≤ 100 KB gzip. Kolektor ≤ 5 menit untuk 135 project dan ≤ 300 thread |
-| Reliability | Snapshot publik selalu dari run terakhir yang valid; run gagal tidak menimpa snapshot. Riwayat (fase, biaya per thread, run) disimpan permanen dan dibackup harian; restore diuji sekali di M3. Kolektor idempotent: menjalankan dua kali berturut-turut tidak menggandakan biaya |
+| Reliability | Pembacaan usage mentah (per thread, per run, kumulatif) disimpan append-only sejak run pertama, karena Amp hanya menyimpan usage thread 90 hari (P12). Snapshot publik selalu dari run terakhir yang valid; run gagal tidak menimpa snapshot. Riwayat (fase, biaya per thread, run) disimpan permanen dan dibackup harian; restore diuji sekali di M3. Kolektor idempotent: menjalankan dua kali berturut-turut tidak menggandakan biaya |
 | Security | Tidak ada endpoint tulis publik; situs publik statis. Kredensial Amp, GitHub dan Linear hanya di lingkungan kolektor privat, tidak pernah di secret workflow repo public. Token GitHub read-only (metadata, actions, contents read) untuk repo yang dibutuhkan. CSP tanpa script pihak ketiga; tanpa inline script kecuali hash. Pemindai privasi (US-03) dan audit dependency di CI. OWASP Top 10 yang relevan untuk situs statis: A01 (allowlist), A02 (tidak ada secret di artefak), A05 (header keamanan), A06 (dependency), A09 (log run tanpa secret) |
 | Accessibility | WCAG 2.2 AA: kontras ≥ 4,5:1, status tidak hanya dengan warna, navigasi keyboard penuh, target sentuh ≥ 24×24 px, tabel dengan header, axe-core 0 pelanggaran serius di e2e |
 | Privacy | Lihat inventaris data di bawah. Situs publik tidak memasang cookie atau analitik pihak ketiga. UU PDP: satu-satunya data pribadi adalah nama dan username GitHub Thomas, yang dipublikasikan atas keputusannya sendiri sebagai pemilik |
@@ -246,18 +247,21 @@ Permintaan akses/penghapusan: karena tidak ada data pengunjung, permintaan dijaw
 | Dependency | Purpose | Access needed | Cost | Fallback |
 | --- | --- | --- | --- | --- |
 | Repo factory (Amp-hosted git) | Registry dan riwayat fase | Kredensial baca git milik Thomas di lingkungan kolektor | 0 | Salinan registry terakhir; run `failed` |
-| Amp CLI `amp threads usage` | Biaya per thread dan per rentang | Login/API key Amp milik Thomas di lingkungan kolektor | Kredit Amp per panggilan tidak diketahui; ASUMSI ≈ 0 | Angka terakhir + tanda basi; entri manual `cost_usd` registry |
+| Amp External API `GET /api/v2/threads/{id}/usage` | Total biaya per thread (JSON), P11 | Token Amp milik Thomas (`amp.api:threads:view`) di lingkungan kolektor | ASUMSI: panggilan API tidak memakai kredit | Pembacaan terakhir + tanda basi |
+| Amp CLI `amp threads usage --start --end` | Biaya per rentang waktu untuk pemecahan per fase (P4, P11b) | Login Amp CLI/`AMP_API_KEY` di lingkungan kolektor | Sama | Selisih pembacaan kumulatif yang disimpan kolektor (granularitas = interval run) |
 | GitHub REST API | CI, rilis, aktivitas repo public (Should) | Token read-only | 0 | Tanpa CI; tampilkan "tidak diketahui" |
 | Linear API | Progres issue (Could) | API key read-only | 0 | Tidak ditampilkan |
 | Hosting statis | Situs publik | Akun penyedia (dipilih Phase 5, disetujui Phase 12) | Target US$0; batas < US$20/bulan | Artefak lokal (showcase offline) |
-| Lingkungan kolektor terjadwal | Menjalankan kolektor + DB | Mesin/runner privat milik Thomas (dipilih Phase 5) | Target US$0–5/bulan | Dijalankan manual oleh Thomas |
+| Lingkungan kolektor terjadwal | Menjalankan kolektor + penyimpanan | Lingkungan privat milik Thomas, dipilih Phase 5 (kandidat: repo private di org dengan Actions cron; 2.000 menit/bulan dibagi semua repo private org) | Target US$0–5/bulan | Dijalankan manual oleh Thomas |
 | Field gate di registry | Sumber "Menunggu Thomas" | Persetujuan Thomas untuk menambah field opsional `gate` di schema registry | 0 | US-07 hanya menampilkan project dengan `status: blocked` |
 
 ## 8. Risks and assumptions
 
 | Risk or assumption | Impact | Likelihood | Mitigation or validation |
 | --- | --- | --- | --- |
-| Format teks `amp threads usage` berubah (P6) | Tinggi: biaya salah/terlewat | Sedang | Parser ketat dengan fixture; teks tak dikenal → `partial`, bukan angka nol; contract test di CI; tanyakan Amp apakah ada output JSON |
+| Schema API usage atau format teks CLI berentang berubah (P6, P11) | Tinggi: biaya salah/terlewat | Sedang | Validasi schema JSON dan parser CLI ketat dengan fixture; respons tak dikenal → `partial`, bukan angka nol; contract test di CI |
+| Usage thread hilang setelah 90 hari (P12) | Tinggi: riwayat biaya hilang permanen | Pasti bila tidak disimpan | Kolektor berjalan sejak M1 dan menyimpan pembacaan append-only; backup harian |
+| Kuota Actions private org (2.000 menit/bulan) habis oleh CI project lain | Sedang: kolektor berhenti | Sedang | Kolektor ≤ 2 menit/run; pantau lewat M1; fallback mesin Thomas |
 | Kredensial Amp bocor dari kolektor (akses semua thread Thomas) | Tinggi | Rendah | Kolektor di lingkungan privat, tidak pernah di Actions repo public; log diredaksi; `amp orb redact-output` / redaksi sendiri |
 | Data privat terpublikasi | Tinggi | Sedang | Allowlist + pemindai yang menggagalkan build (US-03); review keamanan di Phase 10 |
 | Salah tafsir biaya (subscription vs kredit) | Sedang: reputasi | Tinggi | Dua angka terpisah, metodologi (US-08), tidak pernah dijumlahkan |

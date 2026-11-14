@@ -1,7 +1,7 @@
 # Brief — Factory dashboard publik
 
 Project `816-factory-dashboard` · kategori 8 (showcase) · Phase 0 Intake, 14 Nov 2026.
-Status: **Phase 0 selesai**. Bagian "Setelah discovery" ditambahkan di Phase 1.
+Status: Phase 0 dan Phase 1 selesai. Nama kerja: **Lantai Pabrik**.
 
 ## Ide dalam 5 baris
 
@@ -38,3 +38,28 @@ Status: **Phase 0 selesai**. Bagian "Setelah discovery" ditambahkan di Phase 1.
 4. Bagaimana kredensial Amp/GitHub/Linear disimpan untuk pengumpul data tanpa masuk repo publik?
 5. Apakah dashboard juga menjadi alat kerja Thomas (filter "menunggu aku"), atau murni etalase publik?
 6. Domain dan hosting: pakai subdomain gratis (GitHub Pages/Cloudflare) atau domain sendiri (butuh approval biaya)?
+
+## Setelah discovery (Phase 1, 14 Nov 2026)
+
+Varian terpilih: V1, dashboard publik statis dari snapshot ber-allowlist, ditambah ekspor data terbuka dan halaman metodologi biaya ([research.md](research.md#variations)).
+
+1. **Apa:** Lantai Pabrik, situs statis ID/EN yang menampilkan fase, gate menunggu, CI/rilis dan biaya agent per project dan per fase factory Thomas.
+2. **Untuk siapa:** Thomas (cockpit pagi hari, mode pemilik lokal) dan Dimas, tech lead yang menilai factory AI ([personas.md](personas.md)).
+3. **Masalah:** tidak ada produk publik yang menggabungkan fase + gate + biaya per project/fase; tampilan biaya yang ada privat atau per orang ([research.md](research.md#competitors)).
+4. **Pendekatan:** kolektor privat terjadwal membaca registry, Amp API dan GitHub; build menyaring lewat allowlist; pemindai privasi menggagalkan build bila ada data terlarang.
+5. **Batasan:** target US$0, maksimal < US$20/bulan; tanpa login; tanpa isi/judul thread.
+
+**Asumsi yang terjawab:**
+
+- Biaya bisa dibaca sebagai JSON dari Amp External API, bukan hanya teks CLI (P11).
+- Biaya per fase bisa dihitung lewat `--start/--end` CLI (P4, P11b).
+- Repo private tidak terlihat tanpa autentikasi; API GitHub tanpa token hanya mengembalikan 66 repo public (P16).
+- Hosting statis gratis tersedia untuk repo public di org Free (GitHub Pages, Cloudflare Pages).
+
+**Asumsi baru / tersisa:**
+
+- Usage Amp hanya tersedia 90 hari (P12): kolektor harus berjalan sejak awal build; kalau tidak, biaya awal wave 1 hilang.
+- Field gate tertunda belum ada di registry (P8); butuh persetujuan Thomas untuk menambah field opsional.
+- Thomas setuju biaya nyata dan nama project public tampil (ditanyakan di gate Phase 4).
+
+**Pertanyaan terbuka 1, 2, 3 dan 5** dijawab sebagai keputusan default di PRD; Thomas mengonfirmasi atau mengubahnya di gate Phase 4.
