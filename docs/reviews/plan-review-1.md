@@ -54,4 +54,5 @@ Usulan yang mengubah scope atau kebijakan publik; tidak diterapkan diam-diam.
 
 - Model berbeda untuk critic tidak dipakai (lihat paragraf pembuka).
 - D7 (penyimpanan JSONL vs PostgreSQL) dan D20 (lokasi kolektor/hosting): Phase 5.
-- Spike M0 harus memastikan: batas 90 hari pada CLI berentang, pembulatan dan list price per rentang, makna list price untuk thread berbayar kredit, apakah panggilan API memakai kredit, read-only git Amp-hosted.
+- Terjawab setelah round 1 (P17): CLI berentang memuat list price dan membulatkan ke sen.
+- Spike M0 harus memastikan: batas 90 hari pada CLI berentang, makna list price untuk thread berbayar kredit, apakah panggilan API memakai kredit, read-only git Amp-hosted.
